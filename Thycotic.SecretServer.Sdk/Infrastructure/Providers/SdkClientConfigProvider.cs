@@ -11,13 +11,14 @@ using System.Text;
 using Thycotic.SecretServer.Sdk.Infrastructure.Models;
 using System.Configuration;
 using Newtonsoft.Json.Linq;
+using System.Reflection;
 
 namespace Thycotic.SecretServer.Sdk.Infrastructure.Providers
 {
 
 public class SdkClientConfigProvider : ISdkClientConfigProvider
 {
-    private const string ConfigSettingsFile = "Thycotic.SecretServer.Sdk.json";
+    private string ConfigSettingsFile = "Thycotic.SecretServer.Sdk.json";
     private dynamic ConfigSettings;
     private readonly IDataProtector _dataProtector;
     private CacheSettings _cacheSettings;
@@ -29,8 +30,17 @@ public class SdkClientConfigProvider : ISdkClientConfigProvider
     {
         this._dataProtector = dataProtector;
         try
-        {
-            ConfigSettings = JObject.Parse(File.ReadAllText(ConfigSettingsFile));
+            {
+                // Default to config in cwd
+                string _configSettingsFile = ConfigSettingsFile;
+                // Check for global config next to dll
+                string ConfigSettingsFileGlobal = new System.Uri(Assembly.GetExecutingAssembly().CodeBase.ToString().Replace(".dll",".json")).LocalPath;
+                if (File.Exists(ConfigSettingsFileGlobal))
+                {
+                    _configSettingsFile = ConfigSettingsFileGlobal;
+                }
+                // Try to get custom config or use defaults
+                ConfigSettings = JObject.Parse(File.ReadAllText(_configSettingsFile));
         }
         catch
         {
